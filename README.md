@@ -22,9 +22,12 @@ Pictures not downloaded due to already existing in the List Cache and the List C
 6. Notify when download finishes: If this is checked, a notification in your system tray will be displayed notifying you when a download has completed.
 7. Your API Key: You must enter a valid API key to utilize this program. This field will display all characters as black password dots (•).
 
+# Screenshot(s)
+![alt-text](http://i.imgur.com/X8Rf0GF.png "TBID Main Window")
+
 # Todo
 * Include possible errors / exceptions
-* Include screenshots
+* Include more screenshots if needed
 
 # Other stuff
 I'll update this more... later.
