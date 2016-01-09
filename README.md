@@ -5,7 +5,7 @@ I'm still going to update this later.
 # General Information
 TBID is a lightweight application that allows one to download images from a tumblr blog.  
 Download settings can be established, such as image count limits and tags to further specify the images to download.  
-Note that to use this application you **must have a valid tumblr API key**.
+To use this application, you **must have a valid tumblr API key** (might change this in the future).
 
 # Usage
 To use TBID, simply enter the correct information in the fields and click the "Start" button.
