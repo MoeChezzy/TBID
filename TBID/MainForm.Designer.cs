@@ -41,13 +41,16 @@
             this.CheckBoxNotify = new System.Windows.Forms.CheckBox();
             this.ButtonStart = new System.Windows.Forms.Button();
             this.ProgressBarMain = new System.Windows.Forms.ProgressBar();
-            this.FolderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
+            this.FolderBrowserDialogMain = new System.Windows.Forms.FolderBrowserDialog();
             this.ToolTipMain = new System.Windows.Forms.ToolTip(this.components);
             this.NotifyIconMain = new System.Windows.Forms.NotifyIcon(this.components);
             this.ButtonAbout = new System.Windows.Forms.Button();
             this.TextBoxAPIKey = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.LabelDownloadLimit = new System.Windows.Forms.Label();
+            this.NumericUpDownDownloadLimit = new System.Windows.Forms.NumericUpDown();
             this.GroupBoxDownloadSettings.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.NumericUpDownDownloadLimit)).BeginInit();
             this.SuspendLayout();
             // 
             // CheckBoxUseListCache
@@ -55,15 +58,17 @@
             this.CheckBoxUseListCache.AutoSize = true;
             this.CheckBoxUseListCache.Checked = true;
             this.CheckBoxUseListCache.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.CheckBoxUseListCache.Location = new System.Drawing.Point(12, 128);
+            this.CheckBoxUseListCache.Location = new System.Drawing.Point(12, 152);
             this.CheckBoxUseListCache.Name = "CheckBoxUseListCache";
             this.CheckBoxUseListCache.Size = new System.Drawing.Size(113, 17);
-            this.CheckBoxUseListCache.TabIndex = 8;
+            this.CheckBoxUseListCache.TabIndex = 10;
             this.CheckBoxUseListCache.Text = "Use List Cache (?)";
             this.CheckBoxUseListCache.UseVisualStyleBackColor = true;
             // 
             // GroupBoxDownloadSettings
             // 
+            this.GroupBoxDownloadSettings.Controls.Add(this.NumericUpDownDownloadLimit);
+            this.GroupBoxDownloadSettings.Controls.Add(this.LabelDownloadLimit);
             this.GroupBoxDownloadSettings.Controls.Add(this.LabelDownloadDirectory);
             this.GroupBoxDownloadSettings.Controls.Add(this.ButtonBrowse);
             this.GroupBoxDownloadSettings.Controls.Add(this.TextBoxDownloadDirectory);
@@ -73,7 +78,7 @@
             this.GroupBoxDownloadSettings.Controls.Add(this.TextBoxUsernameBlogLink);
             this.GroupBoxDownloadSettings.Location = new System.Drawing.Point(12, 12);
             this.GroupBoxDownloadSettings.Name = "GroupBoxDownloadSettings";
-            this.GroupBoxDownloadSettings.Size = new System.Drawing.Size(343, 110);
+            this.GroupBoxDownloadSettings.Size = new System.Drawing.Size(343, 134);
             this.GroupBoxDownloadSettings.TabIndex = 7;
             this.GroupBoxDownloadSettings.TabStop = false;
             this.GroupBoxDownloadSettings.Text = "Download Settings";
@@ -95,6 +100,7 @@
             this.ButtonBrowse.TabIndex = 5;
             this.ButtonBrowse.Text = "...";
             this.ButtonBrowse.UseVisualStyleBackColor = true;
+            this.ButtonBrowse.Click += new System.EventHandler(this.ButtonBrowse_Click);
             // 
             // TextBoxDownloadDirectory
             // 
@@ -141,26 +147,27 @@
             this.CheckBoxNotify.AutoSize = true;
             this.CheckBoxNotify.Checked = true;
             this.CheckBoxNotify.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.CheckBoxNotify.Location = new System.Drawing.Point(132, 128);
+            this.CheckBoxNotify.Location = new System.Drawing.Point(132, 152);
             this.CheckBoxNotify.Name = "CheckBoxNotify";
             this.CheckBoxNotify.Size = new System.Drawing.Size(169, 17);
-            this.CheckBoxNotify.TabIndex = 9;
+            this.CheckBoxNotify.TabIndex = 11;
             this.CheckBoxNotify.Text = "Notify when download finishes";
             this.CheckBoxNotify.UseVisualStyleBackColor = true;
             // 
             // ButtonStart
             // 
             this.ButtonStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ButtonStart.Location = new System.Drawing.Point(307, 124);
+            this.ButtonStart.Location = new System.Drawing.Point(307, 148);
             this.ButtonStart.Name = "ButtonStart";
             this.ButtonStart.Size = new System.Drawing.Size(48, 23);
-            this.ButtonStart.TabIndex = 10;
+            this.ButtonStart.TabIndex = 12;
             this.ButtonStart.Text = "Start";
             this.ButtonStart.UseVisualStyleBackColor = true;
+            this.ButtonStart.Click += new System.EventHandler(this.ButtonStart_Click);
             // 
             // ProgressBarMain
             // 
-            this.ProgressBarMain.Location = new System.Drawing.Point(12, 151);
+            this.ProgressBarMain.Location = new System.Drawing.Point(12, 175);
             this.ProgressBarMain.Name = "ProgressBarMain";
             this.ProgressBarMain.Size = new System.Drawing.Size(289, 23);
             this.ProgressBarMain.TabIndex = 12;
@@ -172,34 +179,56 @@
             // ButtonAbout
             // 
             this.ButtonAbout.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ButtonAbout.Location = new System.Drawing.Point(307, 151);
+            this.ButtonAbout.Location = new System.Drawing.Point(307, 175);
             this.ButtonAbout.Name = "ButtonAbout";
             this.ButtonAbout.Size = new System.Drawing.Size(48, 23);
-            this.ButtonAbout.TabIndex = 11;
+            this.ButtonAbout.TabIndex = 13;
             this.ButtonAbout.Text = "About";
             this.ButtonAbout.UseVisualStyleBackColor = true;
+            this.ButtonAbout.Click += new System.EventHandler(this.ButtonAbout_Click);
             // 
             // TextBoxAPIKey
             // 
-            this.TextBoxAPIKey.Location = new System.Drawing.Point(12, 180);
+            this.TextBoxAPIKey.Location = new System.Drawing.Point(12, 204);
             this.TextBoxAPIKey.Name = "TextBoxAPIKey";
             this.TextBoxAPIKey.Size = new System.Drawing.Size(267, 20);
-            this.TextBoxAPIKey.TabIndex = 13;
+            this.TextBoxAPIKey.TabIndex = 14;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(285, 184);
+            this.label1.Location = new System.Drawing.Point(285, 208);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(70, 13);
             this.label1.TabIndex = 14;
             this.label1.Text = "Your API Key";
             // 
+            // LabelDownloadLimit
+            // 
+            this.LabelDownloadLimit.AutoSize = true;
+            this.LabelDownloadLimit.Location = new System.Drawing.Point(18, 101);
+            this.LabelDownloadLimit.Name = "LabelDownloadLimit";
+            this.LabelDownloadLimit.Size = new System.Drawing.Size(105, 13);
+            this.LabelDownloadLimit.TabIndex = 9;
+            this.LabelDownloadLimit.Text = "Download limit (0=∞):";
+            // 
+            // NumericUpDownDownloadLimit
+            // 
+            this.NumericUpDownDownloadLimit.Location = new System.Drawing.Point(129, 99);
+            this.NumericUpDownDownloadLimit.Maximum = new decimal(new int[] {
+            100000,
+            0,
+            0,
+            0});
+            this.NumericUpDownDownloadLimit.Name = "NumericUpDownDownloadLimit";
+            this.NumericUpDownDownloadLimit.Size = new System.Drawing.Size(208, 20);
+            this.NumericUpDownDownloadLimit.TabIndex = 8;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(367, 212);
+            this.ClientSize = new System.Drawing.Size(367, 236);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.TextBoxAPIKey);
             this.Controls.Add(this.ButtonAbout);
@@ -215,6 +244,7 @@
             this.Text = "TBID";
             this.GroupBoxDownloadSettings.ResumeLayout(false);
             this.GroupBoxDownloadSettings.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.NumericUpDownDownloadLimit)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -233,11 +263,13 @@
         private System.Windows.Forms.CheckBox CheckBoxNotify;
         private System.Windows.Forms.Button ButtonStart;
         private System.Windows.Forms.ProgressBar ProgressBarMain;
-        private System.Windows.Forms.FolderBrowserDialog FolderBrowserDialog;
+        private System.Windows.Forms.FolderBrowserDialog FolderBrowserDialogMain;
         private System.Windows.Forms.ToolTip ToolTipMain;
         private System.Windows.Forms.NotifyIcon NotifyIconMain;
         private System.Windows.Forms.Button ButtonAbout;
         private System.Windows.Forms.TextBox TextBoxAPIKey;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.NumericUpDown NumericUpDownDownloadLimit;
+        private System.Windows.Forms.Label LabelDownloadLimit;
     }
 }
