@@ -19,10 +19,44 @@ namespace TBID
         public MainForm()
         {
             InitializeComponent();
+            InitializeFormClosingEvents();
             InitializeNotifyIcon();
 
             this.Icon = Properties.Resources.Icon;
             this.TextBoxAPIKey.PasswordChar = '\u25CF';
+        }
+
+        private void InitializeFormClosingEvents()
+        {
+            this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (IsDownloading)
+            {
+                DialogResult Confirmation = MessageBox.Show("There is currently a download in progress! Closing " + Program.Name + " will abort the download. Do you still want to exit?", "Download in progress.", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (Confirmation == DialogResult.No)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                else
+                {
+                    CleanupThreads();
+                    Program.Close();
+                }
+            }
+            else
+            {
+                CleanupThreads();
+                Program.Close();
+            }
+        }
+
+        private void CleanupThreads()
+        {
+            // TODO: Implement this method (CleanUpThreads).
         }
 
         #region Notify Icon
@@ -49,7 +83,7 @@ namespace TBID
 
         private void ButtonAbout_Click(object sender, EventArgs e)
         {
-
+            MessageBox.Show(Program.Name + " " + "is a portable and lightweight tumblr blog image downloader." + " " + "It is free and open source, released under the GNU General Public License (version 3)." + Environment.NewLine + Environment.NewLine + "Copyright \u00A9 " + DateTime.Now.Year + " " + Program.Author, "About");
         }
 
         private void ButtonStart_Click(object sender, EventArgs e)
@@ -114,9 +148,9 @@ namespace TBID
             }
         }
 
-        private void ModifyControls(bool Enabled, bool InvokeRequired)
+        private void ModifyControls(bool Enabled, bool invokeRequired)
         {
-            if (InvokeRequired)
+            if (invokeRequired)
             {
                 this.Invoke((MethodInvoker)delegate { ModifyControls(Enabled, false); });
             }
@@ -130,6 +164,18 @@ namespace TBID
                 CheckBoxUseListCache.Enabled = Enabled;
                 CheckBoxNotify.Enabled = Enabled;
                 TextBoxAPIKey.Enabled = Enabled;
+            }
+        }
+
+        private void UpdateStatus(string Status)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke((MethodInvoker)delegate { LabelStatus.Text = "Status: " + Status;  });
+            }
+            else
+            {
+                LabelStatus.Text = "Status: " + Status;
             }
         }
 

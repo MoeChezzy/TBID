@@ -31,6 +31,8 @@
             this.components = new System.ComponentModel.Container();
             this.CheckBoxUseListCache = new System.Windows.Forms.CheckBox();
             this.GroupBoxDownloadSettings = new System.Windows.Forms.GroupBox();
+            this.NumericUpDownDownloadLimit = new System.Windows.Forms.NumericUpDown();
+            this.LabelDownloadLimit = new System.Windows.Forms.Label();
             this.LabelDownloadDirectory = new System.Windows.Forms.Label();
             this.ButtonBrowse = new System.Windows.Forms.Button();
             this.TextBoxDownloadDirectory = new System.Windows.Forms.TextBox();
@@ -46,9 +48,8 @@
             this.NotifyIconMain = new System.Windows.Forms.NotifyIcon(this.components);
             this.ButtonAbout = new System.Windows.Forms.Button();
             this.TextBoxAPIKey = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.LabelDownloadLimit = new System.Windows.Forms.Label();
-            this.NumericUpDownDownloadLimit = new System.Windows.Forms.NumericUpDown();
+            this.LabelAPIKey = new System.Windows.Forms.Label();
+            this.LabelStatus = new System.Windows.Forms.Label();
             this.GroupBoxDownloadSettings.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NumericUpDownDownloadLimit)).BeginInit();
             this.SuspendLayout();
@@ -82,6 +83,27 @@
             this.GroupBoxDownloadSettings.TabIndex = 7;
             this.GroupBoxDownloadSettings.TabStop = false;
             this.GroupBoxDownloadSettings.Text = "Download Settings";
+            // 
+            // NumericUpDownDownloadLimit
+            // 
+            this.NumericUpDownDownloadLimit.Location = new System.Drawing.Point(129, 99);
+            this.NumericUpDownDownloadLimit.Maximum = new decimal(new int[] {
+            100000,
+            0,
+            0,
+            0});
+            this.NumericUpDownDownloadLimit.Name = "NumericUpDownDownloadLimit";
+            this.NumericUpDownDownloadLimit.Size = new System.Drawing.Size(208, 20);
+            this.NumericUpDownDownloadLimit.TabIndex = 8;
+            // 
+            // LabelDownloadLimit
+            // 
+            this.LabelDownloadLimit.AutoSize = true;
+            this.LabelDownloadLimit.Location = new System.Drawing.Point(18, 101);
+            this.LabelDownloadLimit.Name = "LabelDownloadLimit";
+            this.LabelDownloadLimit.Size = new System.Drawing.Size(105, 13);
+            this.LabelDownloadLimit.TabIndex = 9;
+            this.LabelDownloadLimit.Text = "Download limit (0=∞):";
             // 
             // LabelDownloadDirectory
             // 
@@ -194,42 +216,31 @@
             this.TextBoxAPIKey.Size = new System.Drawing.Size(267, 20);
             this.TextBoxAPIKey.TabIndex = 14;
             // 
-            // label1
+            // LabelAPIKey
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(285, 208);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(70, 13);
-            this.label1.TabIndex = 14;
-            this.label1.Text = "Your API Key";
+            this.LabelAPIKey.AutoSize = true;
+            this.LabelAPIKey.Location = new System.Drawing.Point(285, 208);
+            this.LabelAPIKey.Name = "LabelAPIKey";
+            this.LabelAPIKey.Size = new System.Drawing.Size(70, 13);
+            this.LabelAPIKey.TabIndex = 14;
+            this.LabelAPIKey.Text = "Your API Key";
             // 
-            // LabelDownloadLimit
+            // LabelStatus
             // 
-            this.LabelDownloadLimit.AutoSize = true;
-            this.LabelDownloadLimit.Location = new System.Drawing.Point(18, 101);
-            this.LabelDownloadLimit.Name = "LabelDownloadLimit";
-            this.LabelDownloadLimit.Size = new System.Drawing.Size(105, 13);
-            this.LabelDownloadLimit.TabIndex = 9;
-            this.LabelDownloadLimit.Text = "Download limit (0=∞):";
-            // 
-            // NumericUpDownDownloadLimit
-            // 
-            this.NumericUpDownDownloadLimit.Location = new System.Drawing.Point(129, 99);
-            this.NumericUpDownDownloadLimit.Maximum = new decimal(new int[] {
-            100000,
-            0,
-            0,
-            0});
-            this.NumericUpDownDownloadLimit.Name = "NumericUpDownDownloadLimit";
-            this.NumericUpDownDownloadLimit.Size = new System.Drawing.Size(208, 20);
-            this.NumericUpDownDownloadLimit.TabIndex = 8;
+            this.LabelStatus.AutoSize = true;
+            this.LabelStatus.Location = new System.Drawing.Point(12, 232);
+            this.LabelStatus.Name = "LabelStatus";
+            this.LabelStatus.Size = new System.Drawing.Size(135, 13);
+            this.LabelStatus.TabIndex = 15;
+            this.LabelStatus.Text = "Status: Awaiting download.";
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(367, 236);
-            this.Controls.Add(this.label1);
+            this.ClientSize = new System.Drawing.Size(367, 254);
+            this.Controls.Add(this.LabelStatus);
+            this.Controls.Add(this.LabelAPIKey);
             this.Controls.Add(this.TextBoxAPIKey);
             this.Controls.Add(this.ButtonAbout);
             this.Controls.Add(this.ProgressBarMain);
@@ -268,8 +279,9 @@
         private System.Windows.Forms.NotifyIcon NotifyIconMain;
         private System.Windows.Forms.Button ButtonAbout;
         private System.Windows.Forms.TextBox TextBoxAPIKey;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label LabelAPIKey;
         private System.Windows.Forms.NumericUpDown NumericUpDownDownloadLimit;
         private System.Windows.Forms.Label LabelDownloadLimit;
+        private System.Windows.Forms.Label LabelStatus;
     }
 }

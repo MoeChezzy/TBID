@@ -15,6 +15,7 @@ namespace TBID
     static class Program
     {
         public const string Name = "TBID";
+        public const string Author = "Chezzy";
 
         private static string GUID = ((GuidAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(GuidAttribute), false).GetValue(0)).Value.ToString();
 
