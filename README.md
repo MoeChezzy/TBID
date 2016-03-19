@@ -12,7 +12,7 @@ To use TBID, simply enter the correct information in the fields and click the "S
 
 1. Username or Blog Link: Enter the username or blog link of the blog you would like to download from.  
 If a valid URL is not given, it will be assumed that the input is a username; the protocol / server name (*http://* and *www*) will be added to the front of the input and *.tumblr.com* will be appended to the end of it.
-2. Tags to use: Enter a tag (or multiple tags, separated with spaces) to use during the download. All images downloaded will contain the tag(s) inputted.  
+2. Tags to use: Enter a tag (or multiple tags, separated with commas) to use during the download. All images downloaded will contain the tag(s) inputted.  
 **Do NOT include the tag character** (#).  
 If this is blank (or only whitespace) then no tags will be used in downloading.
 3. Download Directory: Input the directory to download the images. To open a folder browser dialog, click the "..." button next to the text box. You can also insert the directory manually (if, for whatever reason, the folder browser dialog does not work).

@@ -105,8 +105,6 @@ namespace TBID
         {
             if (!IsDownloading)
             {
-                // TODO: Validate all fields before starting.
-
                 // Validating directory.
                 if (!Directory.Exists(TextBoxDownloadDirectory.Text))
                 {
@@ -154,7 +152,7 @@ namespace TBID
                     if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
                     {
                         // Notify the user about the progress inconsistencies with multiple tags.
-                        if (TextBoxTags.Text.Split(' ').Length > 1)
+                        if (TextBoxTags.Text.Split(',').Length > 1)
                         {
                             MessageBox.Show("Because of the limitations of tumblr's API, it is not possible to retrieve the total amount of posts that contain multiple tags in one request. The progress bar may fluctuate and go up or down as " + Program.Name + " recalculates the actual amount of posts containing all of your specified tags.", "Progress bar inconsistencies.", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             Properties.Settings.Default.FirstTimeInconsistencies = false;
@@ -179,7 +177,6 @@ namespace TBID
             }
             else
             {
-                // TODO: Stop download / clean.
                 CleanupThreads();
                 ModifyControls(true, InvokeRequired);
                 ButtonStart.Text = "Start";
@@ -190,6 +187,10 @@ namespace TBID
         private void Download()
         {
             UpdateStatus("Began download thread.");
+
+            Download_Downloaded = 0;
+            Download_Total = 0;
+
             ThreadScrape = new Thread(Scrape);
             ThreadScrape.Start();
         }
@@ -199,6 +200,25 @@ namespace TBID
             // Regex for acquiring total posts:
             // total_posts":(\d+)
             // Escaped: "total_posts\":(\d+)"
+
+            if (TextBoxTags.Text.Split(',').Length > 1)
+            {
+                // Multiple tags.
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(TextBoxTags.Text))
+                {
+                    // No tags.
+                }
+                else
+                {
+                    // Single tag.
+                    using (WebClient wc = new WebClient())
+                    {
+                    }
+                }
+            }
         }
 
         private void SetProgress(ulong Downloaded, ulong Total, bool invokeRequired)
