@@ -8,18 +8,18 @@ namespace TBID
 {
     public class ImagePost
     {
-        public string ImageURL;
-        public int ID;
-        public string BlogURL;
+        public string ImageUrl;
+        public int Id;
+        public string BlogUrl;
 
-        public ImagePost(string URL, int ID, string BlogURL)
+        public ImagePost(string url, int id, string blogUrl)
         {
-            ImageURL = URL;
-            this.ID = ID;
-            this.BlogURL = BlogURL;
+            ImageUrl = url;
+            this.Id = id;
+            this.BlogUrl = blogUrl;
         }
 
-        public static List<ImagePost> CreateImagePostsFromResponse(string Response)
+        public static List<ImagePost> CreateImagePostsFromResponse(string response)
         {
             List<ImagePost> ResultList = new List<ImagePost>();
 

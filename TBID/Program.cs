@@ -17,7 +17,7 @@ namespace TBID
         public const string Name = "TBID";
         public const string Author = "Chezzy";
 
-        private static string GUID = ((GuidAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(GuidAttribute), false).GetValue(0)).Value.ToString();
+        private static string Guid = ((GuidAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(GuidAttribute), false).GetValue(0)).Value.ToString();
 
         /// <summary>
         /// The main entry point for the application.
@@ -29,20 +29,20 @@ namespace TBID
             Application.SetCompatibleTextRenderingDefault(false);
 
             // Initialize variables for mutex.
-            string MutexID = string.Format("Global\\{{{0}}}", GUID);
+            string MutexId = string.Format("Global\\{{{0}}}", Guid);
             bool CreatedNewMutex;
             MutexAccessRule AllowEveryoneRule = new MutexAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), MutexRights.FullControl, AccessControlType.Allow);
             MutexSecurity SecuritySettings = new MutexSecurity();
             SecuritySettings.AddAccessRule(AllowEveryoneRule);
 
-            using (Mutex mutex = new Mutex(false, MutexID, out CreatedNewMutex, SecuritySettings))
+            using (Mutex Mutex = new Mutex(false, MutexId, out CreatedNewMutex, SecuritySettings))
             {
                 bool HandleAcquired = false;
                 try
                 {
                     try
                     {
-                        HandleAcquired = mutex.WaitOne(2000, false);
+                        HandleAcquired = Mutex.WaitOne(2000, false);
                         if (!HandleAcquired)
                         {
                             MessageBox.Show("There is an instance of " + Name + " already currently running.", Name + " already open.", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -63,7 +63,7 @@ namespace TBID
                 {
                     // Release the mutex if it was acquired.
                     if (HandleAcquired)
-                        mutex.ReleaseMutex();
+                        Mutex.ReleaseMutex();
                 }
             }
         }
