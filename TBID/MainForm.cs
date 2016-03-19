@@ -28,8 +28,6 @@ namespace TBID
 
         private Stopwatch stopwatch = new Stopwatch();
 
-        private bool Scraping = false;
-
         private ulong Download_Downloaded = 0;
         private ulong Download_Total = 0;
 
@@ -191,7 +189,6 @@ namespace TBID
                     }
                 }
 
-                Scraping = false;
                 IsDownloading = true;
                 ButtonStart.Text = "Stop";
                 ModifyControls(false);
@@ -207,8 +204,10 @@ namespace TBID
             }
             else
             {
-                Scraping = false;
                 CleanupThreads();
+                stopwatch.Stop();
+                UpdateStatus("Download cancelled.");
+                SetProgress(0);
                 ModifyControls(true);
                 ButtonStart.Text = "Start";
                 IsDownloading = false;
@@ -242,19 +241,22 @@ namespace TBID
             while (!Done)
             {
                 Done = true;
-                foreach (WebClient wc in WebClients)
+                foreach (WebClient wc in WebClients.ToList())
                 {
                     if (wc.IsBusy)
                     {
                         Done = false;
                         break;
                     }
+                    else
+                    {
+                        WebClients.Remove(wc);
+                    }
                 }
             }
 
             // Done.
             IsDownloading = false;
-            Scraping = false;
             this.Invoke((MethodInvoker)delegate { ButtonStart.Text = "Start"; });
             this.Invoke((MethodInvoker)delegate { SetProgress(100); });
             UpdateStatus("Finished downloading. Time elapsed: " + stopwatch.Elapsed + ".");
@@ -278,7 +280,6 @@ namespace TBID
             // total_posts":(\d+)
             // Regex for acquiring picture:
             // original_size":{"url":"([^"]+)"
-            Scraping = true;
 
             ulong Found = 0;
             bool DownloadLimitReached = false;
@@ -338,7 +339,6 @@ namespace TBID
 
             UpdateStatus("Scraping finished, waiting for downloads.");
             // Done.
-            Scraping = false;
         }
 
         private string GetTags()
