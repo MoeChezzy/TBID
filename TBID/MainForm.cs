@@ -13,6 +13,8 @@ namespace TBID
 {
     public partial class MainForm : Form
     {
+        private string SelectedBlogName = "";
+
         private bool IsDownloading = false;
 
         private Thread ThreadScrape = null;
@@ -111,14 +113,21 @@ namespace TBID
                 // Validating URL.
                 // We might want to consider putting this check into a separate thread.
                 if (IsValidURL(TextBoxUsernameBlogLink.Text)) {
-                    // Is a URL.
 
-                    if (!IsExistingURL(TextBoxUsernameBlogLink.Text)) {
-                        MessageBox.Show("An error occured while accessing the blog. This may be because the blog has been deleted or there was an error in your input.", "URL-404 / username not found.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
+                    Regex regexTumblrName = new Regex(@"(?:https?:\/\/)?(?<name>[a-zA-Z-_]+)\.tumblr\.com\/?");
+                    if (regexTumblrName.IsMatch(TextBoxUsernameBlogLink.Text)) {
+                        SelectedBlogName = regexTumblrName.Match(TextBoxUsernameBlogLink.Text).Groups["name"].Value;
                     }
-
-                    // Valid URL.
+                    else {
+                        //TODO: optimize
+                        string pageSource = new WebClient().DownloadString(ValidifyUrl(TextBoxUsernameBlogLink.Text));
+                        Regex regexTumblrBlogName = new Regex("blogName=(?<bla>[^&^\"]+)");
+                        if (!regexTumblrBlogName.IsMatch(pageSource)) {
+                            MessageBox.Show("An error occured while accessing the blog. This may be because the blog has been deleted or there was an error in your input.", "No Tumblr blog detected.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                        SelectedBlogName = regexTumblrBlogName.Match(pageSource).Groups["bla"].Value;
+                    }
                 }
                 else {
                     // Might be a username, check validity.
@@ -133,6 +142,7 @@ namespace TBID
                     }
 
                     // Valid username.
+                    SelectedBlogName = TextBoxUsernameBlogLink.Text;
                 }
 
                 // Validating API key.
@@ -212,8 +222,7 @@ namespace TBID
                 Done = true;
                 foreach (WebClient wc in WebClients.ToList())
                 {
-                    if (wc.IsBusy)
-                    {
+                    if (wc.IsBusy) {
                         Done = false;
                         break;
                     }
@@ -258,23 +267,31 @@ namespace TBID
             {
                 // One tag, or no tags.
                 using (WebClient wc = new WebClient()) {
-                    string url = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}", TextBoxUsernameBlogLink.Text, TextBoxAPIKey.Text);
+
+                    //getting url
+                    string url = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}", SelectedBlogName, TextBoxAPIKey.Text);
                     if (!string.IsNullOrWhiteSpace(TextBoxTags.Text)) url += "&tag=" + GetTags();
+
+                    //get total amount of posts & pages
                     string response = wc.DownloadString(url);
                     Match totalPosts = Regex.Match(response, @"total_posts\"":(\d+)");
                     ulong total = ulong.Parse(totalPosts.Groups[1].Value);
                     ulong pages = total/ResponseLimit;
                     if ((total*1.0/ResponseLimit)%1 != 0)
                         pages ++;
-                    for (ulong p = 0; p < pages; p++) {
-                        string pageURL = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}&offset={2}", TextBoxUsernameBlogLink.Text, TextBoxAPIKey.Text, p*ResponseLimit);
-                        UpdateStatus("Retrieved page " + (p + 1) + ", current total: " + Download_Total + ".");
+
+                    //loop through every page
+                    for (ulong p = 0; p < pages; p++) { //download page
+                        string pageURL = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}&offset={2}", SelectedBlogName, TextBoxAPIKey.Text, p*ResponseLimit);
+                        UpdateStatus("Retrieved page " + (p + 1) + ", current total: " + Download_Total + "."); //you should move this down :p
                         if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
                             pageURL += "&tag=" + GetTags();
                         string pageResponse = wc.DownloadString(pageURL);
+
+                        //get firesticks
                         MatchCollection matches = Regex.Matches(pageResponse, @"original_size\"":{\""url\"":\""([^\""]+)\""");
                         Download_Total += (ulong) matches.Count;
-                        foreach (Match m in matches) {
+                        foreach (Match m in matches) {  //add link to queue
                             LinkQueue.Enqueue(m.Groups[1].Value.Replace("\\/", "/"));
                             Found++;
                             UpdateStatus(string.Format("Found picture: {0} on page {1}, out of {2}.", Found, p + 1, Download_Total));
@@ -353,19 +370,21 @@ namespace TBID
             return URL.Split('/')[URL.Split('/').Length - 1];
         }
 
-        #region URL / Webpage Validation
+        #region URL / Webpage stuff
+
+        private string ValidifyUrl(string input) => input.Replace("https://", "http://").StartsWith("http://") ? input : "http://" + input;
 
         private bool IsValidURL(string URL)
         {
             Uri uri;
-            return Uri.TryCreate(URL, UriKind.Absolute, out uri) && uri != null;
+            return Uri.TryCreate(ValidifyUrl(URL), UriKind.Absolute, out uri) && uri != null;
         }
 
         private bool IsExistingURL(string URL)
         {
             try {
                 HttpWebRequest request = WebRequest.Create(URL) as HttpWebRequest;
-                request.Method = "HEAD";
+                request.Method = "HEAD";        //bad code
                 HttpWebResponse response = request.GetResponse() as HttpWebResponse;
                 response.Close();
                 return (response.StatusCode == HttpStatusCode.OK);
