@@ -22,14 +22,18 @@ namespace TBID
         private Thread ThreadScrape = null;
         private Thread ThreadDownload = null;
 
-        private Queue<string> URLQueue = new Queue<string>();
+        private Queue<string> LinkQueue = new Queue<string>();
 
         private List<WebClient> WebClients = new List<WebClient>();
 
         private Stopwatch stopwatch = new Stopwatch();
 
+        private bool Scraping = false;
+
         private ulong Download_Downloaded = 0;
         private ulong Download_Total = 0;
+
+        private const int ResponseLimit = 20;
 
         public MainForm()
         {
@@ -71,7 +75,14 @@ namespace TBID
 
         private void CleanupThreads()
         {
-            // TODO: Implement this method (CleanUpThreads).
+            while (ThreadScrape.IsAlive)
+            {
+                ThreadDownload.Abort();
+            }
+            while (ThreadDownload.IsAlive)
+            {
+                ThreadDownload.Abort();
+            }
         }
 
         #region Notify Icon
@@ -111,6 +122,11 @@ namespace TBID
                     MessageBox.Show("The specified directory is invalid. Please input a valid directory.", "Invalid directory.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+                // Removing potential trailing backslash.
+                if (TextBoxDownloadDirectory.Text[TextBoxDownloadDirectory.Text.Length - 1] == '\\')
+                {
+                    TextBoxDownloadDirectory.Text = TextBoxDownloadDirectory.Text.Remove(TextBoxDownloadDirectory.Text.Length - 1);
+                }
 
                 // Validating URL.
                 // We might want to consider putting this check into a separate thread.
@@ -147,6 +163,20 @@ namespace TBID
                     }
                 }
 
+                // Validating API key.
+                // We'll be checking for the valid length (50 characters).
+
+                if (string.IsNullOrWhiteSpace(TextBoxAPIKey.Text))
+                {
+                    MessageBox.Show("Please enter a valid API key; you cannot use " + Program.Name + " without one.", "Missing API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (TextBoxAPIKey.Text.Length != 50)
+                {
+                    MessageBox.Show("The API key you entered is invalid.", "Invalid API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 if (Properties.Settings.Default.FirstTimeInconsistencies)
                 {
                     if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
@@ -161,11 +191,11 @@ namespace TBID
                     }
                 }
 
-
+                Scraping = false;
                 IsDownloading = true;
                 ButtonStart.Text = "Stop";
-                ModifyControls(false, InvokeRequired);
-                URLQueue.Clear();
+                ModifyControls(false);
+                LinkQueue.Clear();
 
                 stopwatch.Reset();
                 stopwatch.Start();
@@ -177,8 +207,9 @@ namespace TBID
             }
             else
             {
+                Scraping = false;
                 CleanupThreads();
-                ModifyControls(true, InvokeRequired);
+                ModifyControls(true);
                 ButtonStart.Text = "Start";
                 IsDownloading = false;
             }
@@ -193,43 +224,146 @@ namespace TBID
 
             ThreadScrape = new Thread(Scrape);
             ThreadScrape.Start();
+
+            while (ThreadScrape.IsAlive)
+            {
+                while (LinkQueue.Count > 0)
+                {
+                    string url = LinkQueue.Dequeue();
+                    Uri uri = new Uri(url);
+                    WebClients.Add(new WebClient());
+                    WebClients.Last().DownloadFileCompleted += (sender, e) => WebClient_DownloadFileCompleted(sender, e);
+                    WebClients.Last().DownloadFileAsync(uri, TextBoxDownloadDirectory.Text + "\\" + GetFilename(url));
+                }
+            }
+
+            // Check if any WebClient objects are downloading.
+            bool Done = false;
+            while (!Done)
+            {
+                Done = true;
+                foreach (WebClient wc in WebClients)
+                {
+                    if (wc.IsBusy)
+                    {
+                        Done = false;
+                        break;
+                    }
+                }
+            }
+
+            // Done.
+            IsDownloading = false;
+            Scraping = false;
+            this.Invoke((MethodInvoker)delegate { ButtonStart.Text = "Start"; });
+            this.Invoke((MethodInvoker)delegate { SetProgress(100); });
+            UpdateStatus("Finished downloading. Time elapsed: " + stopwatch.Elapsed + ".");
+            ModifyControls(true);
+            LinkQueue.Clear();
+            stopwatch.Stop();
+            ThreadDownload.Abort();
+            ThreadScrape.Abort();
+        }
+
+        private void WebClient_DownloadFileCompleted(object sender, AsyncCompletedEventArgs e)
+        {
+            Download_Downloaded++;
+            UpdateStatus("Download progress: " + Download_Downloaded + "/" + Download_Total + ".");
+            SetProgress(Download_Downloaded, Download_Total);
         }
 
         private void Scrape()
         {
             // Regex for acquiring total posts:
             // total_posts":(\d+)
-            // Escaped: "total_posts\":(\d+)"
+            // Regex for acquiring picture:
+            // original_size":{"url":"([^"]+)"
+            Scraping = true;
+
+            ulong Found = 0;
+            bool DownloadLimitReached = false;
 
             if (TextBoxTags.Text.Split(',').Length > 1)
             {
                 // Multiple tags.
+                throw new NotImplementedException("This hasn't been added yet. Sorry.");
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(TextBoxTags.Text))
+                // One tag, or no tags.
+                using (WebClient wc = new WebClient())
                 {
-                    // No tags.
-                }
-                else
-                {
-                    // Single tag.
-                    using (WebClient wc = new WebClient())
+                    string url = "http://api.tumblr.com/v2/blog/" + TextBoxUsernameBlogLink.Text + "/posts/photo?api_key=" + TextBoxAPIKey.Text;
+                    if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
                     {
+                        url += "&tag=" + GetTags();
+                    }
+                    string response = wc.DownloadString(url);
+                    Match totalPosts = Regex.Match(response, @"total_posts\"":(\d+)");
+                    ulong total = ulong.Parse(totalPosts.Groups[1].Value);
+                    ulong pages = total / ResponseLimit;
+                    if ((total * 1.0 / ResponseLimit) % 1 != 0)
+                    {
+                        pages += 1;
+                    }
+                    for (ulong p = 0; p < pages; p++)
+                    {
+                        string pageURL = "http://api.tumblr.com/v2/blog/" + TextBoxUsernameBlogLink.Text + "/posts/photo?api_key=" + TextBoxAPIKey.Text + "&offset=" + (p * ResponseLimit);
+                        UpdateStatus("Retrieved page " + (p + 1) + ", current total: " + Download_Total + ".");
+                        if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
+                        {
+                            pageURL += "&tag=" + GetTags();
+                        }
+                        string pageResponse = wc.DownloadString(pageURL);
+                        MatchCollection matches = Regex.Matches(pageResponse, @"original_size\"":{\""url\"":\""([^\""]+)\""");
+                        Download_Total += (ulong)matches.Count;
+                        foreach (Match m in matches)
+                        {
+                            LinkQueue.Enqueue(m.Groups[1].Value.Replace("\\/", "/"));
+                            Found++;
+                            UpdateStatus("Found picture: " + Found + " on page " + (p + 1) + ", out of " + Download_Total + ".");
+                            if (NumericUpDownDownloadLimit.Value != 0 && Found >= NumericUpDownDownloadLimit.Value)
+                            {
+                                DownloadLimitReached = true;
+                                break;
+                            }
+                        }
+                        if (DownloadLimitReached)
+                        {
+                            break;
+                        }
                     }
                 }
             }
+
+            UpdateStatus("Scraping finished, waiting for downloads.");
+            // Done.
+            Scraping = false;
         }
 
-        private void SetProgress(ulong Downloaded, ulong Total, bool invokeRequired)
+        private string GetTags()
         {
-            if (invokeRequired)
+            return TextBoxTags.Text.Replace(" ", "+");
+        }
+
+        private void SetProgress(ulong Downloaded, ulong Total)
+        {
+            if (InvokeRequired)
             {
-                this.Invoke((MethodInvoker)delegate { SetProgress(Downloaded, Total, false); });
+                this.Invoke((MethodInvoker)delegate { SetProgress(Downloaded, Total); });
             }
             else
             {
-                ProgressBarMain.Value = (int)Math.Round(Downloaded * 100.0 / Total, MidpointRounding.AwayFromZero);
+                int value = (int)Math.Round(Downloaded * 100.0 / Total, MidpointRounding.AwayFromZero);
+                if (value > 100)
+                {
+                    value = 100;
+                }
+                if (value < 0)
+                {
+                    value = 0;
+                }
+                ProgressBarMain.Value = value;
             }
         }
 
@@ -239,11 +373,11 @@ namespace TBID
             ProgressBarMain.Value = Value;
         }
 
-        private void ModifyControls(bool Enabled, bool invokeRequired)
+        private void ModifyControls(bool Enabled)
         {
-            if (invokeRequired)
+            if (InvokeRequired)
             {
-                this.Invoke((MethodInvoker)delegate { ModifyControls(Enabled, false); });
+                this.Invoke((MethodInvoker)delegate { ModifyControls(Enabled); });
             }
             else
             {
@@ -279,6 +413,11 @@ namespace TBID
             }
             TextBoxDownloadDirectory.Clear();
             TextBoxDownloadDirectory.Text = FolderBrowserDialogMain.SelectedPath;
+        }
+
+        private string GetFilename(string URL)
+        {
+            return URL.Split('/')[URL.Split('/').Length - 1];
         }
 
         #region URL / Webpage Validation
