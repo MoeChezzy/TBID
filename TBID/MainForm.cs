@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Net;
@@ -17,6 +13,8 @@ namespace TBID
 {
     public partial class MainForm : Form
     {
+        private string SelectedBlogName = "";
+
         private bool IsDownloading = false;
 
         private Thread ThreadScrape = null;
@@ -45,42 +43,31 @@ namespace TBID
 
         private void InitializeFormClosingEvents()
         {
-            this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
+            this.FormClosing += MainForm_FormClosing;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (IsDownloading)
-            {
-                DialogResult Confirmation = MessageBox.Show("There is currently a download in progress! Closing " + Program.Name + " will abort the download. Do you still want to exit?", "Download in progress.", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                if (Confirmation == DialogResult.No)
-                {
+            if (!IsDownloading) {
+                CleanupThreads();
+                Program.Close();
+            }
+            else {
+                DialogResult Confirmation = MessageBox.Show(string.Format("There is currently a download in progress! Closing {0} will abort the download. Do you still want to exit?", Program.Name), "Download in progress.", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (Confirmation == DialogResult.No) {
                     e.Cancel = true;
-                    return;
                 }
-                else
-                {
+                else {
                     CleanupThreads();
                     Program.Close();
                 }
-            }
-            else
-            {
-                CleanupThreads();
-                Program.Close();
             }
         }
 
         private void CleanupThreads()
         {
-            while (ThreadScrape.IsAlive)
-            {
-                ThreadDownload.Abort();
-            }
-            while (ThreadDownload.IsAlive)
-            {
-                ThreadDownload.Abort();
-            }
+            while (ThreadScrape.IsAlive)    ThreadDownload.Abort();
+            while (ThreadDownload.IsAlive)  ThreadDownload.Abort();
         }
 
         #region Notify Icon
@@ -107,82 +94,74 @@ namespace TBID
 
         private void ButtonAbout_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(Program.Name + " " + "is a portable and lightweight tumblr blog image downloader." + " " + "It is free and open source, released under the GNU General Public License (version 3)." + Environment.NewLine + Environment.NewLine + "Copyright \u00A9 " + DateTime.Now.Year + " " + Program.Author, "About");
+            MessageBox.Show(string.Format("{0} " + "is a portable and lightweight tumblr blog image downloader." + " " + "It is free and open source, released under the GNU General Public License (version 3).{1}{1}Copyright \u00A9 {2} {3}", Program.Name, Environment.NewLine, DateTime.Now.Year, Program.Author), "About");
         }
 
         private void ButtonStart_Click(object sender, EventArgs e)
         {
-            if (!IsDownloading)
-            {
+            if (!IsDownloading) {
                 // Validating directory.
-                if (!Directory.Exists(TextBoxDownloadDirectory.Text))
-                {
+                if (!Directory.Exists(TextBoxDownloadDirectory.Text)) {
                     MessageBox.Show("The specified directory is invalid. Please input a valid directory.", "Invalid directory.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
                 // Removing potential trailing backslash.
                 if (TextBoxDownloadDirectory.Text[TextBoxDownloadDirectory.Text.Length - 1] == '\\')
-                {
                     TextBoxDownloadDirectory.Text = TextBoxDownloadDirectory.Text.Remove(TextBoxDownloadDirectory.Text.Length - 1);
-                }
 
                 // Validating URL.
                 // We might want to consider putting this check into a separate thread.
-                if (!IsValidURL(TextBoxUsernameBlogLink.Text))
-                {
+                if (IsValidURL(TextBoxUsernameBlogLink.Text)) {
+
+                    Regex regexTumblrName = new Regex(@"(?:https?:\/\/)?(?<name>[a-zA-Z-_]+)\.tumblr\.com\/?");
+                    if (regexTumblrName.IsMatch(TextBoxUsernameBlogLink.Text)) {
+                        SelectedBlogName = regexTumblrName.Match(TextBoxUsernameBlogLink.Text).Groups["name"].Value;
+                    }
+                    else {
+                        //TODO: optimize
+                        string pageSource = new WebClient().DownloadString(ValidifyUrl(TextBoxUsernameBlogLink.Text));
+                        Regex regexTumblrBlogName = new Regex("blogName=(?<bla>[^&^\"]+)");
+                        if (!regexTumblrBlogName.IsMatch(pageSource)) {
+                            MessageBox.Show("An error occured while accessing the blog. This may be because the blog has been deleted or there was an error in your input.", "No Tumblr blog detected.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                        SelectedBlogName = regexTumblrBlogName.Match(pageSource).Groups["bla"].Value;
+                    }
+                }
+                else {
                     // Might be a username, check validity.
-                    string UserURL = "http://" + TextBoxUsernameBlogLink.Text + ".tumblr.com/";
-                    if (!IsValidURL(UserURL))
-                    {
+                    string UserURL = string.Format("http://{0}.tumblr.com/", TextBoxUsernameBlogLink.Text);
+                    if (!IsValidURL(UserURL)) {
                         MessageBox.Show("The specified URL / username is invalid. Please recheck your input.", "Invalid URL / username.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    if (!IsExistingURL(UserURL))
-                    {
+                    if (!IsExistingURL(UserURL)) {
                         MessageBox.Show("An error occured while accessing the blog. This may be because the blog has been deleted or there was an error in your input.", "URL-404 / username not found.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    else
-                    {
-                        // Valid username.
-                    }
-                }
-                else
-                {
-                    // Is a URL.
-                    if (!IsExistingURL(TextBoxUsernameBlogLink.Text))
-                    {
-                        MessageBox.Show("An error occured while accessing the blog. This may be because the blog has been deleted or there was an error in your input.", "URL-404 / username not found.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                    else
-                    {
-                        // Valid URL.
-                    }
+
+                    // Valid username.
+                    SelectedBlogName = TextBoxUsernameBlogLink.Text;
                 }
 
                 // Validating API key.
                 // We'll be checking for the valid length (50 characters).
 
-                if (string.IsNullOrWhiteSpace(TextBoxAPIKey.Text))
-                {
+                if (string.IsNullOrWhiteSpace(TextBoxAPIKey.Text)) {
                     MessageBox.Show("Please enter a valid API key; you cannot use " + Program.Name + " without one.", "Missing API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-                if (TextBoxAPIKey.Text.Length != 50)
-                {
-                    MessageBox.Show("The API key you entered is invalid.", "Invalid API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (TextBoxAPIKey.Text.Length != 50) {
+                    MessageBox.Show("The API key you entered is of invalid length.", "Invalid API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                if (Properties.Settings.Default.FirstTimeInconsistencies)
-                {
-                    if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
-                    {
+                if (Properties.Settings.Default.FirstTimeInconsistencies) {
+                    if (!string.IsNullOrWhiteSpace(TextBoxTags.Text)) {
                         // Notify the user about the progress inconsistencies with multiple tags.
-                        if (TextBoxTags.Text.Split(',').Length > 1)
-                        {
-                            MessageBox.Show("Because of the limitations of tumblr's API, it is not possible to retrieve the total amount of posts that contain multiple tags in one request. The progress bar may fluctuate and go up or down as " + Program.Name + " recalculates the actual amount of posts containing all of your specified tags.", "Progress bar inconsistencies.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        if (TextBoxTags.Text.Split(',').Length > 1) {
+                            MessageBox.Show("Because of the limitations of Tumblr's API, it is not possible to retrieve the total amount of posts that contain multiple tags in one request. The progress bar may fluctuate and go up or down as " + Program.Name + " recalculates the actual amount of posts containing all of your specified tags.", "Progress bar inconsistencies.", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             Properties.Settings.Default.FirstTimeInconsistencies = false;
                             Properties.Settings.Default.Save();
                         }
@@ -231,7 +210,7 @@ namespace TBID
                     string url = LinkQueue.Dequeue();
                     Uri uri = new Uri(url);
                     WebClients.Add(new WebClient());
-                    WebClients.Last().DownloadFileCompleted += (sender, e) => WebClient_DownloadFileCompleted(sender, e);
+                    WebClients.Last().DownloadFileCompleted += WebClient_DownloadFileCompleted;
                     WebClients.Last().DownloadFileAsync(uri, TextBoxDownloadDirectory.Text + "\\" + GetFilename(url));
                 }
             }
@@ -243,15 +222,11 @@ namespace TBID
                 Done = true;
                 foreach (WebClient wc in WebClients.ToList())
                 {
-                    if (wc.IsBusy)
-                    {
+                    if (wc.IsBusy) {
                         Done = false;
                         break;
                     }
-                    else
-                    {
-                        WebClients.Remove(wc);
-                    }
+                    WebClients.Remove(wc);
                 }
             }
 
@@ -270,7 +245,7 @@ namespace TBID
         private void WebClient_DownloadFileCompleted(object sender, AsyncCompletedEventArgs e)
         {
             Download_Downloaded++;
-            UpdateStatus("Download progress: " + Download_Downloaded + "/" + Download_Total + ".");
+            UpdateStatus(string.Format("Download progress: {0}/{1}.", Download_Downloaded, Download_Total));
             SetProgress(Download_Downloaded, Download_Total);
         }
 
@@ -284,55 +259,48 @@ namespace TBID
             ulong Found = 0;
             bool DownloadLimitReached = false;
 
-            if (TextBoxTags.Text.Split(',').Length > 1)
-            {
+            if (TextBoxTags.Text.Split(',').Length > 1) {
                 // Multiple tags.
                 throw new NotImplementedException("This hasn't been added yet. Sorry.");
             }
             else
             {
                 // One tag, or no tags.
-                using (WebClient wc = new WebClient())
-                {
-                    string url = "http://api.tumblr.com/v2/blog/" + TextBoxUsernameBlogLink.Text + "/posts/photo?api_key=" + TextBoxAPIKey.Text;
-                    if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
-                    {
-                        url += "&tag=" + GetTags();
-                    }
+                using (WebClient wc = new WebClient()) {
+
+                    //getting url
+                    string url = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}", SelectedBlogName, TextBoxAPIKey.Text);
+                    if (!string.IsNullOrWhiteSpace(TextBoxTags.Text)) url += "&tag=" + GetTags();
+
+                    //get total amount of posts & pages
                     string response = wc.DownloadString(url);
                     Match totalPosts = Regex.Match(response, @"total_posts\"":(\d+)");
                     ulong total = ulong.Parse(totalPosts.Groups[1].Value);
-                    ulong pages = total / ResponseLimit;
-                    if ((total * 1.0 / ResponseLimit) % 1 != 0)
-                    {
-                        pages += 1;
-                    }
-                    for (ulong p = 0; p < pages; p++)
-                    {
-                        string pageURL = "http://api.tumblr.com/v2/blog/" + TextBoxUsernameBlogLink.Text + "/posts/photo?api_key=" + TextBoxAPIKey.Text + "&offset=" + (p * ResponseLimit);
-                        UpdateStatus("Retrieved page " + (p + 1) + ", current total: " + Download_Total + ".");
+                    ulong pages = total/ResponseLimit;
+                    if ((total*1.0/ResponseLimit)%1 != 0)
+                        pages ++;
+
+                    //loop through every page
+                    for (ulong p = 0; p < pages; p++) { //download page
+                        string pageURL = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}&offset={2}", SelectedBlogName, TextBoxAPIKey.Text, p*ResponseLimit);
+                        UpdateStatus("Retrieved page " + (p + 1) + ", current total: " + Download_Total + "."); //you should move this down :p
                         if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
-                        {
                             pageURL += "&tag=" + GetTags();
-                        }
                         string pageResponse = wc.DownloadString(pageURL);
+
+                        //get firesticks
                         MatchCollection matches = Regex.Matches(pageResponse, @"original_size\"":{\""url\"":\""([^\""]+)\""");
-                        Download_Total += (ulong)matches.Count;
-                        foreach (Match m in matches)
-                        {
+                        Download_Total += (ulong) matches.Count;
+                        foreach (Match m in matches) {  //add link to queue
                             LinkQueue.Enqueue(m.Groups[1].Value.Replace("\\/", "/"));
                             Found++;
-                            UpdateStatus("Found picture: " + Found + " on page " + (p + 1) + ", out of " + Download_Total + ".");
-                            if (NumericUpDownDownloadLimit.Value != 0 && Found >= NumericUpDownDownloadLimit.Value)
-                            {
+                            UpdateStatus(string.Format("Found picture: {0} on page {1}, out of {2}.", Found, p + 1, Download_Total));
+                            if (NumericUpDownDownloadLimit.Value != 0 && Found >= NumericUpDownDownloadLimit.Value) {
                                 DownloadLimitReached = true;
                                 break;
                             }
                         }
-                        if (DownloadLimitReached)
-                        {
-                            break;
-                        }
+                        if (DownloadLimitReached) break;
                     }
                 }
             }
@@ -349,20 +317,11 @@ namespace TBID
         private void SetProgress(ulong Downloaded, ulong Total)
         {
             if (InvokeRequired)
-            {
-                this.Invoke((MethodInvoker)delegate { SetProgress(Downloaded, Total); });
-            }
-            else
-            {
-                int value = (int)Math.Round(Downloaded * 100.0 / Total, MidpointRounding.AwayFromZero);
-                if (value > 100)
-                {
-                    value = 100;
-                }
-                if (value < 0)
-                {
-                    value = 0;
-                }
+                this.Invoke((MethodInvoker) delegate { SetProgress(Downloaded, Total); });
+            else {
+                int value = (int) Math.Round(Downloaded*100.0/Total, MidpointRounding.AwayFromZero);
+                if (value > 100) value = 100;
+                if (value < 0) value = 0;
                 ProgressBarMain.Value = value;
             }
         }
@@ -376,11 +335,8 @@ namespace TBID
         private void ModifyControls(bool Enabled)
         {
             if (InvokeRequired)
-            {
-                this.Invoke((MethodInvoker)delegate { ModifyControls(Enabled); });
-            }
-            else
-            {
+                this.Invoke((MethodInvoker) delegate { ModifyControls(Enabled); });
+            else {
                 TextBoxUsernameBlogLink.Enabled = Enabled;
                 TextBoxTags.Enabled = Enabled;
                 TextBoxDownloadDirectory.Enabled = Enabled;
@@ -395,22 +351,16 @@ namespace TBID
         private void UpdateStatus(string Status)
         {
             if (InvokeRequired)
-            {
-                this.Invoke((MethodInvoker)delegate { LabelStatus.Text = "Status: " + Status;  });
-            }
+                this.Invoke((MethodInvoker)delegate { LabelStatus.Text = "Status: " + Status; });
             else
-            {
                 LabelStatus.Text = "Status: " + Status;
-            }
         }
 
         private void ButtonBrowse_Click(object sender, EventArgs e)
         {
             DialogResult Result = FolderBrowserDialogMain.ShowDialog();
             if (Result == DialogResult.Cancel || Result == DialogResult.Abort || Result == DialogResult.Ignore || Result == DialogResult.No || Result == DialogResult.None)
-            {
                 return;
-            }
             TextBoxDownloadDirectory.Clear();
             TextBoxDownloadDirectory.Text = FolderBrowserDialogMain.SelectedPath;
         }
@@ -420,30 +370,26 @@ namespace TBID
             return URL.Split('/')[URL.Split('/').Length - 1];
         }
 
-        #region URL / Webpage Validation
+        #region URL / Webpage stuff
+
+        private string ValidifyUrl(string input) => input.Replace("https://", "http://").StartsWith("http://") ? input : "http://" + input;
 
         private bool IsValidURL(string URL)
         {
-            Uri uri = null;
-            if (!Uri.TryCreate(URL, UriKind.Absolute, out uri) || null == uri)
-            {
-                return false;
-            }
-            return true;
+            Uri uri;
+            return Uri.TryCreate(ValidifyUrl(URL), UriKind.Absolute, out uri) && uri != null;
         }
 
         private bool IsExistingURL(string URL)
         {
-            try
-            {
+            try {
                 HttpWebRequest request = WebRequest.Create(URL) as HttpWebRequest;
-                request.Method = "HEAD";
+                request.Method = "HEAD";        //bad code
                 HttpWebResponse response = request.GetResponse() as HttpWebResponse;
                 response.Close();
                 return (response.StatusCode == HttpStatusCode.OK);
             }
-            catch
-            {
+            catch {
                 return false;
             }
         }
