@@ -88,8 +88,8 @@
             // 
             this.NumericUpDownDownloadLimit.Location = new System.Drawing.Point(129, 99);
             this.NumericUpDownDownloadLimit.Maximum = new decimal(new int[] {
-            100000,
-            0,
+            -1,
+            -1,
             0,
             0});
             this.NumericUpDownDownloadLimit.Name = "NumericUpDownDownloadLimit";
@@ -178,7 +178,7 @@
             // 
             // ButtonStart
             // 
-            this.ButtonStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ButtonStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ButtonStart.Location = new System.Drawing.Point(307, 148);
             this.ButtonStart.Name = "ButtonStart";
             this.ButtonStart.Size = new System.Drawing.Size(48, 23);

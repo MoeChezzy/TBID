@@ -9,12 +9,27 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Net;
+using System.Threading;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace TBID
 {
     public partial class MainForm : Form
     {
         private bool IsDownloading = false;
+
+        private Thread ThreadScrape = null;
+        private Thread ThreadDownload = null;
+
+        private Queue<string> URLQueue = new Queue<string>();
+
+        private List<WebClient> WebClients = new List<WebClient>();
+
+        private Stopwatch stopwatch = new Stopwatch();
+
+        private ulong Download_Downloaded = 0;
+        private ulong Download_Total = 0;
 
         public MainForm()
         {
@@ -100,7 +115,7 @@ namespace TBID
                 }
 
                 // Validating URL.
-                // TODO: Consider placing this in a separate thread?
+                // We might want to consider putting this check into a separate thread.
                 if (!IsValidURL(TextBoxUsernameBlogLink.Text))
                 {
                     // Might be a username, check validity.
@@ -134,18 +149,74 @@ namespace TBID
                     }
                 }
 
+                if (Properties.Settings.Default.FirstTimeInconsistencies)
+                {
+                    if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
+                    {
+                        // Notify the user about the progress inconsistencies with multiple tags.
+                        if (TextBoxTags.Text.Split(' ').Length > 1)
+                        {
+                            MessageBox.Show("Because of the limitations of tumblr's API, it is not possible to retrieve the total amount of posts that contain multiple tags in one request. The progress bar may fluctuate and go up or down as " + Program.Name + " recalculates the actual amount of posts containing all of your specified tags.", "Progress bar inconsistencies.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            Properties.Settings.Default.FirstTimeInconsistencies = false;
+                            Properties.Settings.Default.Save();
+                        }
+                    }
+                }
+
+
                 IsDownloading = true;
                 ButtonStart.Text = "Stop";
                 ModifyControls(false, InvokeRequired);
-                // TODO: Begin download.
+                URLQueue.Clear();
+
+                stopwatch.Reset();
+                stopwatch.Start();
+
+                SetProgress(0);
+
+                ThreadDownload = new Thread(Download);
+                ThreadDownload.Start();
             }
             else
             {
                 // TODO: Stop download / clean.
+                CleanupThreads();
                 ModifyControls(true, InvokeRequired);
                 ButtonStart.Text = "Start";
                 IsDownloading = false;
             }
+        }
+
+        private void Download()
+        {
+            UpdateStatus("Began download thread.");
+            ThreadScrape = new Thread(Scrape);
+            ThreadScrape.Start();
+        }
+
+        private void Scrape()
+        {
+            // Regex for acquiring total posts:
+            // total_posts":(\d+)
+            // Escaped: "total_posts\":(\d+)"
+        }
+
+        private void SetProgress(ulong Downloaded, ulong Total, bool invokeRequired)
+        {
+            if (invokeRequired)
+            {
+                this.Invoke((MethodInvoker)delegate { SetProgress(Downloaded, Total, false); });
+            }
+            else
+            {
+                ProgressBarMain.Value = (int)Math.Round(Downloaded * 100.0 / Total, MidpointRounding.AwayFromZero);
+            }
+        }
+
+        private void SetProgress(int Value)
+        {
+            // This should be only used on the main UI thread.
+            ProgressBarMain.Value = Value;
         }
 
         private void ModifyControls(bool Enabled, bool invokeRequired)

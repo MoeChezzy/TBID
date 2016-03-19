@@ -51,7 +51,7 @@ namespace TBID
                     }
                     catch (AbandonedMutexException)
                     {
-                        // The mutex was abandoned in another process. It will still get acquired.
+                        // The mutex was abandoned in another process, so in this case it will still get acquired.
                         HandleAcquired = true;
                     }
 

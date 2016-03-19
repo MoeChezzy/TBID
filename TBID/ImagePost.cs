@@ -18,5 +18,14 @@ namespace TBID
             this.ID = ID;
             this.BlogURL = BlogURL;
         }
+
+        public static List<ImagePost> CreateImagePostsFromResponse(string Response)
+        {
+            List<ImagePost> ResultList = new List<ImagePost>();
+
+
+
+            return ResultList;
+        }
     }
 }
