@@ -17,10 +17,10 @@ namespace TBID
 {
     public partial class MainForm : Form
     {
-        private bool IsDownloading = false;
+        private bool IsDownloading;
 
-        private Thread ThreadScrape = null;
-        private Thread ThreadDownload = null;
+        private Thread ThreadScrape;
+        private Thread ThreadDownload;
 
         private Queue<string> LinkQueue = new Queue<string>();
 
@@ -28,8 +28,8 @@ namespace TBID
 
         private Stopwatch Sw = new Stopwatch();
 
-        private ulong DownloadDownloaded = 0;
-        private ulong DownloadTotal = 0;
+        private ulong DownloadDownloaded;
+        private ulong DownloadTotal;
 
         private const int ResponseLimit = 20;
 
@@ -52,7 +52,7 @@ namespace TBID
         {
             if (IsDownloading)
             {
-                DialogResult Confirmation = MessageBox.Show("There is currently a download in progress! Closing " + Program.Name + " will abort the download. Do you still want to exit?", "Download in progress.", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                DialogResult Confirmation = MessageBox.Show(string.Format("There is currently a download in progress! Closing {0} will abort the download. Do you still want to exit?", Program.Name), "Download in progress.", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (Confirmation == DialogResult.No)
                 {
                     e.Cancel = true;
@@ -131,7 +131,7 @@ namespace TBID
                 if (!IsValidUrl(TextBoxUsernameBlogLink.Text))
                 {
                     // Might be a username, check validity.
-                    string UserUrl = "http://" + TextBoxUsernameBlogLink.Text + ".tumblr.com/";
+                    string UserUrl = string.Format("http://{0}.tumblr.com/", TextBoxUsernameBlogLink.Text);
                     if (!IsValidUrl(UserUrl))
                     {
                         MessageBox.Show("The specified URL / username is invalid. Please recheck your input.", "Invalid URL / username.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -158,12 +158,25 @@ namespace TBID
                     else
                     {
                         // Valid URL.
+                        // Check if the URL is a Tumblr blog.
+                        using (WebClient Wc = new WebClient())
+                        {
+                            string source = Wc.DownloadString(TextBoxUsernameBlogLink.Text);
+                            if (!source.Contains("s.id = 'tumblr-cdx';"))
+                            {
+                                // Is not a Tumblr blog.
+                            }
+                            else
+                            {
+                                // Is a tumblr blog.
+                                // Remove protocol part of URL.
+                                TextBoxUsernameBlogLink.Text = TextBoxUsernameBlogLink.Text.Split(new string[] {"://"}, StringSplitOptions.None)[1];
+                            }
+                        }
                     }
                 }
 
-                // Validating API key.
-                // We'll be checking for the valid length (50 characters).
-
+                // Validating API key field.
                 if (string.IsNullOrWhiteSpace(TextBoxAPIKey.Text))
                 {
                     MessageBox.Show(string.Format("Please enter a valid API key; you cannot use {0} without one.", Program.Name), "Missing API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -171,6 +184,7 @@ namespace TBID
                 }
                 if (TextBoxAPIKey.Text.Length != 50)
                 {
+                    // Checking for valid API key length (50 characters).
                     MessageBox.Show("The API key you entered is invalid.", "Invalid API key.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
@@ -189,28 +203,37 @@ namespace TBID
                     }
                 }
 
-                IsDownloading = true;
-                ButtonStart.Text = "Stop";
-                ModifyControls(false);
-                LinkQueue.Clear();
-
+                // Reset and start the stopwatch.
                 Sw.Reset();
                 Sw.Start();
 
+                // Disable all volatile controls
+                ModifyControls(false);
+
+                // Set download flag
+                IsDownloading = true;
+
+                // Reset progress bar
                 SetProgress(0);
 
+                // Clear the LinkQueue
+                LinkQueue.Clear();
+
+                ButtonStart.Text = "Stop";
+
+                // Initialize download thread and start it
                 ThreadDownload = new Thread(Download);
                 ThreadDownload.Start();
             }
             else
             {
-                CleanupThreads();
                 Sw.Stop();
                 UpdateStatus("Download cancelled.");
-                SetProgress(0);
                 ModifyControls(true);
-                ButtonStart.Text = "Start";
                 IsDownloading = false;
+                SetProgress(0);
+                ButtonStart.Text = "Start";
+                CleanupThreads();
             }
         }
 
@@ -270,7 +293,7 @@ namespace TBID
         private void WebClient_DownloadFileCompleted(object sender, AsyncCompletedEventArgs e)
         {
             DownloadDownloaded++;
-            UpdateStatus("Download progress: " + DownloadDownloaded + "/" + DownloadTotal + ".");
+            UpdateStatus(string.Format("Download progress: {0}/{1}.", DownloadDownloaded, DownloadTotal));
             SetProgress(DownloadDownloaded, DownloadTotal);
         }
 
@@ -294,10 +317,10 @@ namespace TBID
                 // One tag, or no tags.
                 using (WebClient Wc = new WebClient())
                 {
-                    string Url = "http://api.tumblr.com/v2/blog/" + TextBoxUsernameBlogLink.Text + "/posts/photo?api_key=" + TextBoxAPIKey.Text;
+                    string Url = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}", TextBoxUsernameBlogLink.Text, TextBoxAPIKey.Text);
                     if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
                     {
-                        Url += "&tag=" + GetTags();
+                        Url += string.Format("&tag={0}", GetTags());
                     }
                     string Response = Wc.DownloadString(Url);
                     Match TotalPosts = Regex.Match(Response, @"total_posts\"":(\d+)");
@@ -309,11 +332,11 @@ namespace TBID
                     }
                     for (ulong P = 0; P < Pages; P++)
                     {
-                        string PageUrl = "http://api.tumblr.com/v2/blog/" + TextBoxUsernameBlogLink.Text + "/posts/photo?api_key=" + TextBoxAPIKey.Text + "&offset=" + (P * ResponseLimit);
+                        string PageUrl = string.Format("http://api.tumblr.com/v2/blog/{0}/posts/photo?api_key={1}&offset={2}", TextBoxUsernameBlogLink.Text, TextBoxAPIKey.Text, (P * ResponseLimit));
                         UpdateStatus("Retrieved page " + (P + 1) + ", current total: " + DownloadTotal + ".");
                         if (!string.IsNullOrWhiteSpace(TextBoxTags.Text))
                         {
-                            PageUrl += "&tag=" + GetTags();
+                            PageUrl += string.Format("&tag={0}", GetTags());
                         }
                         string PageResponse = Wc.DownloadString(PageUrl);
                         MatchCollection Matches = Regex.Matches(PageResponse, @"original_size\"":{\""url\"":\""([^\""]+)\""");
@@ -322,7 +345,7 @@ namespace TBID
                         {
                             LinkQueue.Enqueue(M.Groups[1].Value.Replace("\\/", "/"));
                             Found++;
-                            UpdateStatus("Found picture: " + Found + " on page " + (P + 1) + ", out of " + DownloadTotal + ".");
+                            UpdateStatus(string.Format("Found picture: {0} on page {1}, out of {2}.", Found, (P + 1), DownloadTotal));
                             if (NumericUpDownDownloadLimit.Value != 0 && Found >= NumericUpDownDownloadLimit.Value)
                             {
                                 DownloadLimitReached = true;
@@ -396,11 +419,11 @@ namespace TBID
         {
             if (InvokeRequired)
             {
-                Invoke((MethodInvoker)delegate { LabelStatus.Text = "Status: " + status;  });
+                Invoke((MethodInvoker)delegate { LabelStatus.Text = string.Format("Status: {0}", status);  });
             }
             else
             {
-                LabelStatus.Text = "Status: " + status;
+                LabelStatus.Text = string.Format("Status: {0}", status);
             }
         }
 
